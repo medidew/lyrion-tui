@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	lyrionapi "github.com/medidew/lyrion-tui/lyrion-api"
+	lyrionapi "github.com/medidew/lyrion-tui/internal"
 )
 
 func main() {
@@ -15,6 +15,8 @@ func main() {
 		panic(err)
 	}
 	defer lyrion_server.Close()
+
+	fmt.Printf("lyrion_server: %v\n", lyrion_server)
 
 	count, err := lyrion_server.GetPlayerCount()
 	if err != nil {

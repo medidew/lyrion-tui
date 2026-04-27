@@ -2,7 +2,6 @@ package lyrionapi
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -10,8 +9,7 @@ import (
 )
 
 type LyrionServer struct {
-	conn    net.Conn
-	players []*LyrionPlayer
+	conn net.Conn
 }
 
 // Initiates Telnet connection to the music server, which remains open until close() is called.
@@ -25,10 +23,11 @@ func Connect(address string) (*LyrionServer, error) {
 		return nil, err
 	}
 
-	return &LyrionServer{
-		conn:    lyrion_connection,
-		players: []*LyrionPlayer{},
-	}, nil
+	server := &LyrionServer{
+		conn: lyrion_connection,
+	}
+
+	return server, err
 }
 
 // Sends a command across the Telnet connection and returns the response.
@@ -62,40 +61,38 @@ func (server *LyrionServer) Close() error {
 	return server.conn.Close()
 }
 
-// Returns the number
-func (server *LyrionServer) GetPlayerCount() (int, error) {
-	response, err := server.Query("player count ?")
+func (server *LyrionServer) TotalGenres() (int, error) {
+	genres, err := server.Query("info total genres ?")
 	if err != nil {
 		return -1, err
 	}
-
-	// expected response is 14 characters in
-	count, err := strconv.ParseInt(response[13:], 10, 0)
-	if err != nil {
-		return -1, err
-	}
-
-	return int(count), nil
+	num_genres, err := strconv.ParseInt(genres, 10, 0)
+	return int(num_genres), nil
 }
 
-func (server *LyrionServer) GetPlayer(index int) (*LyrionPlayer, error) {
-	request := fmt.Sprintf("player id %v ?", index)
-	id, err := server.Query(request)
+func (server *LyrionServer) TotalArtists() (int, error) {
+	artists, err := server.Query("info total artists ?")
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
-	id = id[len(request)-1:]
+	num_artists, err := strconv.ParseInt(artists, 10, 0)
+	return int(num_artists), nil
+}
 
-	request = fmt.Sprintf("%v name ?", id)
-	name, err := server.Query(request)
+func (server *LyrionServer) TotalAlbums() (int, error) {
+	albums, err := server.Query("info total albums ?")
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
-	name = name[len(request)-1:]
+	num_albums, err := strconv.ParseInt(albums, 10, 0)
+	return int(num_albums), nil
+}
 
-	return &LyrionPlayer{
-		id:     id,
-		name:   name,
-		server: server,
-	}, nil
+func (server *LyrionServer) TotalSongs() (int, error) {
+	songs, err := server.Query("info total songs ?")
+	if err != nil {
+		return -1, err
+	}
+	num_songs, err := strconv.ParseInt(songs, 10, 0)
+	return int(num_songs), nil
 }
