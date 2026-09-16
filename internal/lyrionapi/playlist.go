@@ -43,8 +43,8 @@ func (player *LyrionPlayer) queryBoolField(command string) (bool, error) {
 	return value == "1", nil
 }
 
-func (player *LyrionPlayer) Play(fadein_duration int) error {
-	request := fmt.Sprintf("%v play %v", player.id, fadein_duration)
+func (player *LyrionPlayer) Play(fadeinDuration int) error {
+	request := fmt.Sprintf("%v play %v", player.id, fadeinDuration)
 	_, err := player.server.Query(request)
 	return err
 }
@@ -61,8 +61,8 @@ func (player *LyrionPlayer) Pause() error {
 	return err
 }
 
-func (player *LyrionPlayer) Unpause(fadein_duration int) error {
-	request := fmt.Sprintf("%v pause 0 %v", player.id, fadein_duration)
+func (player *LyrionPlayer) Unpause(fadeinDuration int) error {
+	request := fmt.Sprintf("%v pause 0 %v", player.id, fadeinDuration)
 	_, err := player.server.Query(request)
 	return err
 }
@@ -125,22 +125,22 @@ func (player *LyrionPlayer) queryFloatField(command string) (float64, error) {
 }
 
 // Can also be used for playlists.
-func (player *LyrionPlayer) PlaySong(song string, song_title string, fadein_duration int) error {
-	request := fmt.Sprintf("%v playlist play %v %v %v", player.id, song, song_title, fadein_duration)
+func (player *LyrionPlayer) PlaySong(song string, songTitle string, fadeinDuration int) error {
+	request := fmt.Sprintf("%v playlist play %v %v %v", player.id, encodeArg(song), encodeArg(songTitle), fadeinDuration)
 	_, err := player.server.Query(request)
 	return err
 }
 
 // Can also be used for playlists.
-func (player *LyrionPlayer) AddSong(song string, song_title string) error {
-	request := fmt.Sprintf("%v playlist add %v %v", player.id, song, song_title)
+func (player *LyrionPlayer) AddSong(song string, songTitle string) error {
+	request := fmt.Sprintf("%v playlist add %v %v", player.id, encodeArg(song), encodeArg(songTitle))
 	_, err := player.server.Query(request)
 	return err
 }
 
 // Can also be used for playlists.
-func (player *LyrionPlayer) InsertSong(song string, song_title string) error {
-	request := fmt.Sprintf("%v playlist insert %v %v", player.id, song, song_title)
+func (player *LyrionPlayer) InsertSong(song string, songTitle string) error {
+	request := fmt.Sprintf("%v playlist insert %v %v", player.id, encodeArg(song), encodeArg(songTitle))
 	_, err := player.server.Query(request)
 	return err
 }
@@ -151,8 +151,8 @@ func (player *LyrionPlayer) DeleteSongByTitle(song string) error {
 	return err
 }
 
-func (player *LyrionPlayer) MoveSong(from_index int, to_index int) error {
-	request := fmt.Sprintf("%v playlist move %v %v", player.id, from_index, to_index)
+func (player *LyrionPlayer) MoveSong(fromIndex int, toIndex int) error {
+	request := fmt.Sprintf("%v playlist move %v %v", player.id, fromIndex, toIndex)
 	_, err := player.server.Query(request)
 	return err
 }

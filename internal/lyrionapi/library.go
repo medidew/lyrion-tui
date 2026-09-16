@@ -58,6 +58,17 @@ type FolderItem struct {
 	URL      string
 }
 
+// Playlist is a saved playlist (distinct from a player's live/current
+// playlist, which LyrionPlayer's methods in playlist.go operate on). Its URL
+// can be passed directly to LyrionPlayer.PlaySong/AddSong/InsertSong, which
+// are generic over songs, playlists and directories.
+type Playlist struct {
+	ID     string
+	Name   string
+	URL    string
+	Remote bool
+}
+
 type SearchResults struct {
 	ArtistsCount int
 	AlbumsCount  int
@@ -75,7 +86,7 @@ func (server *LyrionServer) totalInfoField(field string) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	n, err := strconv.ParseInt(response[len(request)-1:], 10, 0)
+	n, err := strconv.ParseInt(sliceOrEmpty(response, len(request)-1), 10, 0)
 	return int(n), err
 }
 
@@ -225,6 +236,18 @@ func (opts MusicFolderOpts) args() []string {
 	return args
 }
 
+type PlaylistQueryOpts struct {
+	Search string
+}
+
+func (opts PlaylistQueryOpts) args() []string {
+	args := []string{"tags:ux"}
+	if opts.Search != "" {
+		args = append(args, "search:"+encodeArg(opts.Search))
+	}
+	return args
+}
+
 func orDefault(value, fallback string) string {
 	if value == "" {
 		return fallback
@@ -243,6 +266,15 @@ func genreFromRecord(record map[string]string) Genre {
 
 func artistFromRecord(record map[string]string) Artist {
 	return Artist{ID: tagInt(record, "id"), Name: tagString(record, "artist")}
+}
+
+func playlistFromRecord(record map[string]string) Playlist {
+	return Playlist{
+		ID:     tagString(record, "id"),
+		Name:   tagString(record, "playlist"),
+		URL:    tagString(record, "url"),
+		Remote: tagBool(record, "remote"),
+	}
 }
 
 // albumFromRecord and trackFromRecord map the *response* field names
@@ -320,6 +352,18 @@ func (server *LyrionServer) GetArtists(from, to int, opts ArtistQueryOpts) ([]Ar
 		artists[i] = artistFromRecord(item)
 	}
 	return artists, nil
+}
+
+func (server *LyrionServer) GetPlaylists(from, to int, opts PlaylistQueryOpts) ([]Playlist, error) {
+	items, err := server.queryTaggedList(listCommand("playlists", from, to, opts.args()))
+	if err != nil {
+		return nil, err
+	}
+	playlists := make([]Playlist, len(items))
+	for i, item := range items {
+		playlists[i] = playlistFromRecord(item)
+	}
+	return playlists, nil
 }
 
 func (server *LyrionServer) GetAlbums(from, to int, opts AlbumQueryOpts) ([]Album, error) {

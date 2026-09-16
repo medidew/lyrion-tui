@@ -1,6 +1,7 @@
 package lyrionapi
 
 import (
+	"bufio"
 	"context"
 	"net"
 	"net/url"
@@ -10,8 +11,9 @@ import (
 )
 
 type LyrionServer struct {
-	conn    net.Conn
-	address string
+	conn       net.Conn
+	connReader *bufio.Reader
+	address    string
 
 	mu              sync.Mutex
 	pending         []*pendingRequest
@@ -26,18 +28,19 @@ type LyrionServer struct {
 
 // Initiates Telnet connection to the music server, which remains open until close() is called.
 func Connect(address string) (*LyrionServer, error) {
-	var lyrion_dialer net.Dialer
+	var dialer net.Dialer
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	lyrion_connection, err := lyrion_dialer.DialContext(ctx, "tcp", address)
+	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return nil, err
 	}
 
 	server := &LyrionServer{
-		conn:    lyrion_connection,
-		address: address,
+		conn:       conn,
+		connReader: bufio.NewReader(conn),
+		address:    address,
 	}
 
 	return server, err

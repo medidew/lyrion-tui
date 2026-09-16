@@ -14,13 +14,13 @@ type LyrionPlayer struct {
 }
 
 func (server *LyrionServer) GetPlayerCount() (int, error) {
-	response, err := server.Query("player count ?")
+	request := "player count ?"
+	response, err := server.Query(request)
 	if err != nil {
 		return -1, err
 	}
 
-	// expected response is 14 characters in
-	count, err := strconv.ParseInt(response[13:], 10, 0)
+	count, err := strconv.ParseInt(sliceOrEmpty(response, len(request)-1), 10, 0)
 	if err != nil {
 		return -1, err
 	}
@@ -34,21 +34,21 @@ func (server *LyrionServer) GetPlayer(index int) (*LyrionPlayer, error) {
 	if err != nil {
 		return nil, err
 	}
-	id = id[len(request)-1:]
+	id = sliceOrEmpty(id, len(request)-1)
 
 	request = fmt.Sprintf("%v name ?", id)
 	name, err := server.Query(request)
 	if err != nil {
 		return nil, err
 	}
-	name = name[len(request)-1:]
+	name = sliceOrEmpty(name, len(request)-1)
 
 	request = fmt.Sprintf("player model %v ?", id)
 	model, err := server.Query(request)
 	if err != nil {
 		return nil, err
 	}
-	model = model[len(request)-1:]
+	model = sliceOrEmpty(model, len(request)-1)
 
 	return &LyrionPlayer{
 		id:     id,

@@ -3,7 +3,7 @@ package lyrionapi_test
 import (
 	"testing"
 
-	lyrionapi "github.com/medidew/lyrion-tui/internal"
+	"github.com/medidew/lyrion-tui/internal/lyrionapi"
 )
 
 func TestConnection(t *testing.T) {

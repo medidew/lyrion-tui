@@ -109,7 +109,7 @@ func (server *LyrionServer) Version() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return response[len(request)-1:], nil
+	return sliceOrEmpty(response, len(request)-1), nil
 }
 
 // Can reports whether the server recognizes the given command/query terms.
@@ -119,7 +119,7 @@ func (server *LyrionServer) Can(requestTerms string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return response[len(request)-1:] == "1", nil
+	return sliceOrEmpty(response, len(request)-1) == "1", nil
 }
 
 type ReadDirOpts struct {

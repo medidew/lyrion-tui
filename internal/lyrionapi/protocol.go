@@ -48,6 +48,17 @@ func countTokens(command string) int {
 	return len(strings.Fields(command))
 }
 
+// sliceOrEmpty returns response[from:], or "" if response is shorter than
+// from - guarding against LMS returning a response shorter than the echoed
+// prefix (nothing to report), the same edge case queryField in playlist.go
+// handles for player-scoped scalar queries.
+func sliceOrEmpty(response string, from int) string {
+	if from < 0 || from > len(response) {
+		return ""
+	}
+	return response[from:]
+}
+
 // splitTag splits a decoded "key:value" token on the first colon. A token
 // with no colon (shouldn't occur among the tag tokens passed to parseTagged)
 // is reported via ok=false.
@@ -99,7 +110,11 @@ func tagString(record map[string]string, key string) string {
 }
 
 func tagInt(record map[string]string, key string) int {
-	n, err := strconv.Atoi(record[key])
+	value, ok := record[key]
+	if !ok || value == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(value)
 	if err != nil {
 		return 0
 	}
@@ -107,7 +122,11 @@ func tagInt(record map[string]string, key string) int {
 }
 
 func tagFloat(record map[string]string, key string) float64 {
-	f, err := strconv.ParseFloat(record[key], 64)
+	value, ok := record[key]
+	if !ok || value == "" {
+		return 0
+	}
+	f, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return 0
 	}

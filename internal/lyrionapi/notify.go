@@ -1,6 +1,7 @@
 package lyrionapi
 
 import (
+	"bufio"
 	"errors"
 	"net"
 	"strings"
@@ -52,7 +53,7 @@ func (server *LyrionServer) doQueryRaw(command string) (string, error) {
 func (server *LyrionServer) startReader() {
 	go func() {
 		for {
-			line, err := readRawLine(server.conn)
+			line, err := readRawLine(server.connReader)
 
 			server.mu.Lock()
 			var req *pendingRequest
@@ -166,28 +167,29 @@ func (server *LyrionServer) ensureNotifyConnLocked() error {
 	if err != nil {
 		return err
 	}
+	reader := bufio.NewReader(conn)
 	if _, err := conn.Write([]byte("listen 1\n")); err != nil {
 		conn.Close()
 		return err
 	}
 	// Discard the echo of "listen 1" itself, so subscribers only ever see
 	// genuine unsolicited notifications.
-	if _, err := readRawLine(conn); err != nil {
+	if _, err := readRawLine(reader); err != nil {
 		conn.Close()
 		return err
 	}
 
 	server.notifyConn = conn
-	go server.notifyReader(conn)
+	go server.notifyReader(conn, reader)
 	return nil
 }
 
 // notifyReader is the sole reader of a notifyConn: since that connection
 // never issues Query/queryTagged, every line it reads is unambiguously an
 // unsolicited notification, so no request/response demuxing is needed here.
-func (server *LyrionServer) notifyReader(conn net.Conn) {
+func (server *LyrionServer) notifyReader(conn net.Conn, reader *bufio.Reader) {
 	for {
-		line, err := readRawLine(conn)
+		line, err := readRawLine(reader)
 		if err != nil {
 			server.notifyMu.Lock()
 			subs := server.subscribers
