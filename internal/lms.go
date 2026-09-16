@@ -2,29 +2,26 @@ package lyrionapi
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/url"
-	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type LyrionServer struct {
-	conn net.Conn
-}
+	conn    net.Conn
+	address string
 
-type Genre struct {
-	Name string
-	ID   int
-}
+	mu              sync.Mutex
+	pending         []*pendingRequest
+	startReaderOnce sync.Once
+	closeOnce       sync.Once
+	closed          atomic.Bool
 
-type Song struct {
-	Title    string
-	Artist   string
-	Album    string
-	Genre    string
-	Duration float64
-	Path     string
+	notifyMu    sync.Mutex
+	notifyConn  net.Conn
+	subscribers []*subscriber
 }
 
 // Initiates Telnet connection to the music server, which remains open until close() is called.
@@ -39,7 +36,8 @@ func Connect(address string) (*LyrionServer, error) {
 	}
 
 	server := &LyrionServer{
-		conn: lyrion_connection,
+		conn:    lyrion_connection,
+		address: address,
 	}
 
 	return server, err
@@ -47,81 +45,50 @@ func Connect(address string) (*LyrionServer, error) {
 
 // Sends a command across the Telnet connection and returns the response.
 func (server *LyrionServer) Query(command string) (string, error) {
-	command += "\n"
-	_, err := server.conn.Write([]byte(command))
+	line, err := server.doQueryRaw(command)
 	if err != nil {
 		return "", err
 	}
-
-	response := ""
-	buffer := make([]byte, 1)
-	for buffer[0] != '\n' {
-		_, err := server.conn.Read(buffer)
-		if err != nil {
-			return "", err
-		}
-		response += string(buffer[0])
-	}
-
-	response, err = url.QueryUnescape(response)
-	if err != nil {
-		return "", err
-	}
-
-	return response[:len(response)-1], nil
+	return url.QueryUnescape(line)
 }
 
-// Closes the connection to the music server.
+// queryTagged sends command and parses its response as a tagged, possibly
+// multi-item response: topLevelKeys names the tags (e.g. "count", "rescan")
+// that appear once before any items rather than as part of an item record.
+func (server *LyrionServer) queryTagged(command string, topLevelKeys map[string]bool) (map[string]string, []map[string]string, error) {
+	line, err := server.doQueryRaw(command)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tokens, err := tokenize(line)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	skip := countTokens(command)
+	if skip > len(tokens) {
+		skip = len(tokens)
+	}
+
+	meta, items := parseTagged(tokens[skip:], topLevelKeys)
+	return meta, items, nil
+}
+
+// Closes the connection(s) to the music server. Safe to call more than once.
 func (server *LyrionServer) Close() error {
-	return server.conn.Close()
+	var err error
+	server.closeOnce.Do(func() {
+		server.closed.Store(true)
+		err = server.conn.Close()
+		server.failPending(ErrClosed)
+
+		server.notifyMu.Lock()
+		notifyConn := server.notifyConn
+		server.notifyMu.Unlock()
+		if notifyConn != nil {
+			notifyConn.Close()
+		}
+	})
+	return err
 }
-
-func (server *LyrionServer) TotalGenres() (int, error) {
-	genres, err := server.Query("info total genres ?")
-	if err != nil {
-		return -1, err
-	}
-	num_genres, err := strconv.ParseInt(genres[17:], 10, 0)
-	return int(num_genres), nil
-}
-
-func (server *LyrionServer) TotalArtists() (int, error) {
-	artists, err := server.Query("info total artists ?")
-	if err != nil {
-		return -1, err
-	}
-	num_artists, err := strconv.ParseInt(artists[18:], 10, 0)
-	return int(num_artists), nil
-}
-
-func (server *LyrionServer) TotalAlbums() (int, error) {
-	albums, err := server.Query("info total albums ?")
-	if err != nil {
-		return -1, err
-	}
-	num_albums, err := strconv.ParseInt(albums[17:], 10, 0)
-	return int(num_albums), nil
-}
-
-func (server *LyrionServer) TotalSongs() (int, error) {
-	songs, err := server.Query("info total songs ?")
-	if err != nil {
-		return -1, err
-	}
-	num_songs, err := strconv.ParseInt(songs[16:], 10, 0)
-	return int(num_songs), nil
-}
-
-func (server *LyrionServer) GetGenres(from_index int, to_index int) ([]Genre, error) {
-	request := fmt.Sprintf("genres %v %v", from_index, to_index)
-	genres, err := server.Query(request)
-
-	fmt.Printf("genres: %v\n", genres) // TODO: parse response into slice
-
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
-// TODO: implement the rest of the basic DB queries + search function
