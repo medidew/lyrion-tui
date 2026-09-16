@@ -159,3 +159,60 @@ func (player *LyrionPlayer) CurrentSong() (Song, error) {
 
 	return song, nil
 }
+
+// Can also be used for playlists.
+func (player *LyrionPlayer) PlaySong(song string, song_title string, fadein_duration int) error {
+	request := fmt.Sprintf("%v playlist play %v %v %v", player.id, song, song_title, fadein_duration)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Can also be used for playlists.
+func (player *LyrionPlayer) AddSong(song string, song_title string) error {
+	request := fmt.Sprintf("%v playlist add %v %v", player.id, song, song_title)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Can also be used for playlists.
+func (player *LyrionPlayer) InsertSong(song string, song_title string) error {
+	request := fmt.Sprintf("%v playlist insert %v %v", player.id, song, song_title)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (player *LyrionPlayer) DeleteSongByTitle(song string) error {
+	request := fmt.Sprintf("%v playlist deleteitem %v", player.id, song)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (player *LyrionPlayer) MoveSong(from_index int, to_index int) error {
+	request := fmt.Sprintf("%v playlist move %v %v", player.id, from_index, to_index)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (player *LyrionPlayer) DeleteSong(index int) error {
+	request := fmt.Sprintf("%v playlist delete %v", player.id, index)
+	_, err := player.server.Query(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}

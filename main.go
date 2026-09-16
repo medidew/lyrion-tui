@@ -30,6 +30,8 @@ func main() {
 	}
 	fmt.Printf("id: %v\n", player)
 
+	lyrion_server.GetGenres(0, 1)
+
 	//if err := lyrion_tui.SetRoot(box, true).Run(); err != nil {
 	//	panic(err)
 	//}

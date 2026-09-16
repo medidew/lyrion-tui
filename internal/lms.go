@@ -2,6 +2,7 @@ package lyrionapi
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -10,6 +11,20 @@ import (
 
 type LyrionServer struct {
 	conn net.Conn
+}
+
+type Genre struct {
+	Name string
+	ID   int
+}
+
+type Song struct {
+	Title    string
+	Artist   string
+	Album    string
+	Genre    string
+	Duration float64
+	Path     string
 }
 
 // Initiates Telnet connection to the music server, which remains open until close() is called.
@@ -66,7 +81,7 @@ func (server *LyrionServer) TotalGenres() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	num_genres, err := strconv.ParseInt(genres, 10, 0)
+	num_genres, err := strconv.ParseInt(genres[17:], 10, 0)
 	return int(num_genres), nil
 }
 
@@ -75,7 +90,7 @@ func (server *LyrionServer) TotalArtists() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	num_artists, err := strconv.ParseInt(artists, 10, 0)
+	num_artists, err := strconv.ParseInt(artists[18:], 10, 0)
 	return int(num_artists), nil
 }
 
@@ -84,7 +99,7 @@ func (server *LyrionServer) TotalAlbums() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	num_albums, err := strconv.ParseInt(albums, 10, 0)
+	num_albums, err := strconv.ParseInt(albums[17:], 10, 0)
 	return int(num_albums), nil
 }
 
@@ -93,6 +108,20 @@ func (server *LyrionServer) TotalSongs() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	num_songs, err := strconv.ParseInt(songs, 10, 0)
+	num_songs, err := strconv.ParseInt(songs[16:], 10, 0)
 	return int(num_songs), nil
 }
+
+func (server *LyrionServer) GetGenres(from_index int, to_index int) ([]Genre, error) {
+	request := fmt.Sprintf("genres %v %v", from_index, to_index)
+	genres, err := server.Query(request)
+
+	fmt.Printf("genres: %v\n", genres) // TODO: parse response into slice
+
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// TODO: implement the rest of the basic DB queries + search function
