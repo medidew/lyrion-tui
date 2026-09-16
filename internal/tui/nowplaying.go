@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
 	"github.com/medidew/lyrion-tui/internal/lyrionapi"
@@ -31,11 +32,20 @@ type nowPlayingPanel struct {
 
 func newNowPlayingPanel(app *App) *nowPlayingPanel {
 	tv := tview.NewTextView().SetDynamicColors(true)
-	tv.SetBorder(true).SetTitle(" Now Playing ")
+	tv.SetBorder(true).SetTitle(" Now Playing (Enter/p: preview queue) ")
 
 	panel := &nowPlayingPanel{app: app, root: tv}
+	tv.SetInputCapture(panel.input)
 	panel.render()
 	return panel
+}
+
+func (panel *nowPlayingPanel) input(event *tcell.EventKey) *tcell.EventKey {
+	if event.Key() == tcell.KeyEnter || (event.Key() == tcell.KeyRune && event.Rune() == 'p') {
+		panel.app.library.openQueue()
+		return nil
+	}
+	return event
 }
 
 // SetActivePlayer switches which player this panel tracks, tearing down the

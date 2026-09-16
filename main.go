@@ -11,7 +11,7 @@ import (
 func main() {
 	server, err := lyrionapi.Connect("192.168.1.4:9090")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connect: %v\n", err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	defer server.Close()

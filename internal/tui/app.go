@@ -23,6 +23,7 @@ type App struct {
 	players    *playersPanel
 	library    *libraryPanel
 	nowPlaying *nowPlayingPanel
+	queueCache *queueCache
 	hintBar    *tview.TextView
 
 	focusables []tview.Primitive
@@ -37,6 +38,7 @@ func NewApp(server *lyrionapi.LyrionServer) *App {
 	app.players = newPlayersPanel(app)
 	app.library = newLibraryPanel(app)
 	app.nowPlaying = newNowPlayingPanel(app)
+	app.queueCache = newQueueCache(app)
 	app.hintBar = newHintBar()
 
 	app.pages = tview.NewPages().
@@ -61,10 +63,24 @@ func NewApp(server *lyrionapi.LyrionServer) *App {
 // Run starts the event loop and blocks until the user quits.
 func (app *App) Run() error {
 	defer app.nowPlaying.Close()
+	defer app.queueCache.Close()
 	return app.tview.Run()
 }
 
 func (app *App) globalInput(event *tcell.EventKey) *tcell.EventKey {
+	// While a text field (currently just the library search box) has focus,
+	// let it see every key - including letters that are otherwise global
+	// shortcuts (s, d, q, space, +, -) - so the user can actually type them
+	// into their search term. Only Ctrl+C remains global in that case; Tab/
+	// Backtab/Enter/Escape are left to the field's own SetDoneFunc handler.
+	if _, ok := app.tview.GetFocus().(*tview.InputField); ok {
+		if event.Key() == tcell.KeyCtrlC {
+			app.tview.Stop()
+			return nil
+		}
+		return event
+	}
+
 	switch {
 	case event.Key() == tcell.KeyTab:
 		app.cycleFocus(1)
@@ -96,6 +112,12 @@ func (app *App) globalInput(event *tcell.EventKey) *tcell.EventKey {
 	case event.Key() == tcell.KeyRune && event.Rune() == '-':
 		app.adjustVolume(-5)
 		return nil
+	case event.Key() == tcell.KeyRune && event.Rune() == ']':
+		app.nextTrack()
+		return nil
+	case event.Key() == tcell.KeyRune && event.Rune() == '[':
+		app.previousTrack()
+		return nil
 	}
 	return event
 }
@@ -125,8 +147,23 @@ func (app *App) SetActivePlayer(player *lyrionapi.LyrionPlayer, summary lyrionap
 	app.active = player
 	app.activeSummary = summary
 	app.nowPlaying.SetActivePlayer(player, summary.ID, summary.Name)
+	app.queueCache.SetActivePlayer(player, summary.ID)
 	app.pages.SwitchToPage("library")
 	app.tview.SetFocus(app.library.root)
+}
+
+func (app *App) nextTrack() {
+	if app.active == nil {
+		return
+	}
+	app.active.Next()
+}
+
+func (app *App) previousTrack() {
+	if app.active == nil {
+		return
+	}
+	app.active.Previous()
 }
 
 func (app *App) togglePlayPause() {

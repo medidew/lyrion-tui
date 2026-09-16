@@ -2,7 +2,7 @@ package tui
 
 import "github.com/rivo/tview"
 
-const hintText = "Tab: switch panel  Enter: play/open  z: queue  Space: play/pause  s: stop  +/-: volume  d: players  /: search  ?: help  q: quit"
+const hintText = "Tab: switch panel  Enter: play/open  z: queue  p: preview  Space: play/pause  s: stop  [/]: prev/next track  +/-: volume  d: players  /: search  ?: help  q: quit"
 
 const helpText = `Lyrion TUI
 
@@ -11,8 +11,12 @@ arrows / hjkl      move selection
 Enter              drill in, or play the selection
 Backspace / h      go up a level
 z                  add the selection to the queue
-Space              play/pause the active player
+p                  preview contents (genre/artist/album/playlist),
+                   or (on Now Playing) preview the player's queue
+Space              play/pause the active player - works no matter
+                   which panel is focused
 s                  stop the active player
+[ / ]              previous / next track
 + / -              volume up/down
 d                  jump to the player-select panel
 /                  search the library

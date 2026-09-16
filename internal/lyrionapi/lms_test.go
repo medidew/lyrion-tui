@@ -9,7 +9,7 @@ import (
 func TestConnection(t *testing.T) {
 	server, err := lyrionapi.Connect("192.168.1.4:9090") // TODO: abstract this into a config file/env variable
 	if err != nil {
-		t.Errorf("Failed to connect to test server: %v", err)
+		t.Fatalf("Failed to connect to test server: %v", err)
 	}
 	defer server.Close()
 

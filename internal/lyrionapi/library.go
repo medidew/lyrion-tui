@@ -402,6 +402,21 @@ func (server *LyrionServer) GetTitles(from, to int, opts TrackQueryOpts) ([]Trac
 	return tracks, nil
 }
 
+// GetPlaylistTracks lists the tracks in a saved playlist (see GetPlaylists),
+// identified by its ID (Playlist.ID, not its URL).
+func (server *LyrionServer) GetPlaylistTracks(playlistID string, from, to int) ([]Track, error) {
+	command := listCommand("playlists tracks", from, to, []string{"playlist_id:" + playlistID, "tags:galdyut"})
+	items, err := server.queryTaggedList(command)
+	if err != nil {
+		return nil, err
+	}
+	tracks := make([]Track, len(items))
+	for i, item := range items {
+		tracks[i] = trackFromRecord(item)
+	}
+	return tracks, nil
+}
+
 // GetSongInfo looks up a single track by track ID or by its file:// / http:// URL.
 func (server *LyrionServer) GetSongInfo(trackIDOrURL string, tags string) (Track, error) {
 	idArg := "track_id:" + trackIDOrURL

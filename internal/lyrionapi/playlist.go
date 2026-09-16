@@ -260,6 +260,18 @@ func (player *LyrionPlayer) SetIndex(index int) error {
 	return err
 }
 
+// Next skips to the next track in the playlist.
+func (player *LyrionPlayer) Next() error {
+	_, err := player.server.Query(fmt.Sprintf("%v playlist index +1", player.id))
+	return err
+}
+
+// Previous skips to the previous track in the playlist.
+func (player *LyrionPlayer) Previous() error {
+	_, err := player.server.Query(fmt.Sprintf("%v playlist index -1", player.id))
+	return err
+}
+
 // Shuffle returns the current shuffle mode: 0 (off), 1 (by song) or 2 (by album).
 func (player *LyrionPlayer) Shuffle() (int, error) {
 	return player.queryIntField(fmt.Sprintf("%v playlist shuffle ?", player.id))

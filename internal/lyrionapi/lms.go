@@ -3,12 +3,18 @@ package lyrionapi
 import (
 	"bufio"
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// ConnectTimeout is how long Connect waits to establish the TCP connection
+// before giving up.
+const ConnectTimeout = 5 * time.Second
 
 type LyrionServer struct {
 	conn       net.Conn
@@ -27,14 +33,20 @@ type LyrionServer struct {
 }
 
 // Initiates Telnet connection to the music server, which remains open until close() is called.
+// Connect gives up and returns an error if the connection isn't established
+// within ConnectTimeout.
 func Connect(address string) (*LyrionServer, error) {
 	var dialer net.Dialer
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), ConnectTimeout)
 	defer cancel()
 
 	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return nil, err
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			return nil, fmt.Errorf("lyrionapi: timed out connecting to %s after %s", address, ConnectTimeout)
+		}
+		return nil, fmt.Errorf("lyrionapi: failed to connect to %s: %w", address, err)
 	}
 
 	server := &LyrionServer{
