@@ -3,11 +3,17 @@ package lyrionapi_test
 import (
 	"testing"
 
+	"github.com/medidew/lyrion-tui/internal/config"
 	"github.com/medidew/lyrion-tui/internal/lyrionapi"
 )
 
 func TestConnection(t *testing.T) {
-	server, err := lyrionapi.Connect("192.168.1.4:9090") // TODO: abstract this into a config file/env variable
+	cfg, err := config.Load()
+	if err != nil {
+		t.Skipf("no LMS server configured: %v", err)
+	}
+
+	server, err := lyrionapi.Connect(cfg.ServerAddress)
 	if err != nil {
 		t.Fatalf("Failed to connect to test server: %v", err)
 	}

@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/medidew/lyrion-tui/internal/config"
 	"github.com/medidew/lyrion-tui/internal/lyrionapi"
 	"github.com/medidew/lyrion-tui/internal/tui"
 )
 
 func main() {
-	server, err := lyrionapi.Connect("192.168.1.4:9090")
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	server, err := lyrionapi.Connect(cfg.ServerAddress)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

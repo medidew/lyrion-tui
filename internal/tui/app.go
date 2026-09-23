@@ -212,11 +212,8 @@ func (app *App) toggleHelp() {
 		return
 	}
 
-	modal := tview.NewModal().
-		SetText(helpText).
-		AddButtons([]string{"Close"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.pages.RemovePage("help")
-		})
-	app.pages.AddPage("help", modal, true, true)
+	overlay := newHelpOverlay(func() {
+		app.pages.RemovePage("help")
+	})
+	app.pages.AddPage("help", overlay, true, true)
 }
