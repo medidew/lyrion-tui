@@ -27,6 +27,10 @@ type App struct {
 	hintBar    *tview.TextView
 
 	focusables []tview.Primitive
+
+	// helpReturnFocus is what had focus before the help overlay opened, so
+	// closing it can put focus back.
+	helpReturnFocus tview.Primitive
 }
 
 func NewApp(server *lyrionapi.LyrionServer) *App {
@@ -76,6 +80,21 @@ func (app *App) globalInput(event *tcell.EventKey) *tcell.EventKey {
 	if _, ok := app.tview.GetFocus().(*tview.InputField); ok {
 		if event.Key() == tcell.KeyCtrlC {
 			app.tview.Stop()
+			return nil
+		}
+		return event
+	}
+
+	// While the help overlay is open it's modal: only '?' (close) and Ctrl+C
+	// (quit) are handled here; everything else goes to the overlay, which
+	// closes on Esc/Enter and swallows the rest.
+	if app.pages.HasPage("help") {
+		switch {
+		case event.Key() == tcell.KeyCtrlC:
+			app.tview.Stop()
+			return nil
+		case event.Key() == tcell.KeyRune && event.Rune() == '?':
+			app.closeHelp()
 			return nil
 		}
 		return event
@@ -208,12 +227,22 @@ func (app *App) adjustVolume(delta int) {
 
 func (app *App) toggleHelp() {
 	if app.pages.HasPage("help") {
-		app.pages.RemovePage("help")
+		app.closeHelp()
 		return
 	}
 
-	overlay := newHelpOverlay(func() {
-		app.pages.RemovePage("help")
-	})
+	app.helpReturnFocus = app.tview.GetFocus()
+	overlay := newHelpOverlay(app.closeHelp)
 	app.pages.AddPage("help", overlay, true, true)
+	// Focus it explicitly: Pages only hands focus to a new page if Pages
+	// itself had focus, which isn't the case when opened from Now Playing.
+	app.tview.SetFocus(overlay)
+}
+
+func (app *App) closeHelp() {
+	app.pages.RemovePage("help")
+	if app.helpReturnFocus != nil {
+		app.tview.SetFocus(app.helpReturnFocus)
+		app.helpReturnFocus = nil
+	}
 }

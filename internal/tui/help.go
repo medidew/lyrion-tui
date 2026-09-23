@@ -7,7 +7,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-const hintText = "Tab: switch panel  Enter: play/open  z: queue  p: preview  Space: play/pause  s: stop  [/]: prev/next track  +/-: volume  d: players  /: search  ?: help  q: quit"
+const hintText = "input '?' for keybindings"
 
 const helpText = `Lyrion TUI
 
