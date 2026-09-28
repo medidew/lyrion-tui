@@ -219,45 +219,53 @@ func (panel *libraryPanel) performAction(item libraryItem, playNow bool) {
 		return
 	}
 
-	var err error
+	var action func() error
 	switch item.kind {
 	case kindPlaylist:
-		if playNow {
-			err = player.PlaySong(item.id, item.name, 0)
-		} else {
-			err = player.AddSong(item.id, item.name)
+		action = func() error {
+			if playNow {
+				return player.PlaySong(item.id, item.name, 0)
+			}
+			return player.AddSong(item.id, item.name)
 		}
 	case kindTrack:
-		err = applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{TrackID: item.id})
+		action = func() error { return applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{TrackID: item.id}) }
 	case kindAlbum:
-		err = applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{AlbumID: item.id})
+		action = func() error { return applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{AlbumID: item.id}) }
 	case kindArtist:
-		err = applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{ArtistID: item.id})
+		action = func() error { return applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{ArtistID: item.id}) }
 	case kindGenre:
-		err = applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{GenreID: item.id})
+		action = func() error { return applyFilter(player, playNow, lyrionapi.PlaylistControlOpts{GenreID: item.id}) }
 	case kindQueueItem:
 		if !playNow {
 			return // already in the queue - nothing to do for 'z'
 		}
-		index, convErr := strconv.Atoi(item.id)
-		if convErr != nil {
+		index, err := strconv.Atoi(item.id)
+		if err != nil {
 			return
 		}
-		err = player.SetIndex(index)
+		action = func() error { return player.SetIndex(index) }
 	default:
 		return
 	}
 
-	if err != nil {
-		panel.showError(err)
-		return
+	done := func(err error) {
+		if err != nil {
+			panel.showError(err)
+			return
+		}
+		verb := "queued"
+		if playNow {
+			verb = "playing"
+		}
+		panel.showStatus(fmt.Sprintf("[green]%s: %s[-]", verb, tview.Escape(item.title)))
 	}
 
-	verb := "queued"
 	if playNow {
-		verb = "playing"
+		panel.app.changeSong(action, done)
+	} else {
+		done(action())
 	}
-	panel.showStatus(fmt.Sprintf("[green]%s: %s[-]", verb, tview.Escape(item.title)))
 }
 
 // previewCurrent shows the track listing a genre/artist/album/playlist

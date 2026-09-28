@@ -58,6 +58,14 @@ func (server *LyrionServer) GetPlayer(index int) (*LyrionPlayer, error) {
 	}, nil
 }
 
+// PlayerByID returns a handle for the player with the given ID without any
+// round trips (unlike GetPlayer, which looks the player up by index). Useful
+// for a player whose ID is already known, e.g. one this client is itself
+// streaming to, whose index isn't known until it has registered.
+func (server *LyrionServer) PlayerByID(id string) *LyrionPlayer {
+	return &LyrionPlayer{id: id, server: server}
+}
+
 func (player *LyrionPlayer) UUID() (string, error) {
 	return player.queryField(fmt.Sprintf("player uuid %v ?", player.id))
 }

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,6 +26,23 @@ type Config struct {
 	// ServerAddress is the LMS CLI endpoint as host:port (LMS's default CLI
 	// port is 9090).
 	ServerAddress string `json:"server_address"`
+
+	// WebPort is the LMS web server's port on the same host, which serves the
+	// audio stream the local player plays. Optional; defaults to 9000.
+	WebPort int `json:"web_port"`
+
+	// LocalPlayerName is what the local player is called on the server.
+	// Optional; defaults to "lyrion-tui on <hostname>".
+	LocalPlayerName string `json:"local_player_name"`
+}
+
+// ServerHost is ServerAddress without its port.
+func (cfg Config) ServerHost() string {
+	host, _, err := net.SplitHostPort(cfg.ServerAddress)
+	if err != nil {
+		return cfg.ServerAddress
+	}
+	return host
 }
 
 // Path returns where the config file is expected to live.
@@ -76,6 +94,16 @@ func Load() (Config, error) {
 	}
 	if cfg.ServerAddress == "" {
 		return Config{}, fmt.Errorf("config file %s is missing \"server_address\"", path)
+	}
+	if cfg.WebPort == 0 {
+		cfg.WebPort = 9000
+	}
+	if cfg.LocalPlayerName == "" {
+		host, err := os.Hostname()
+		if err != nil {
+			host = "local"
+		}
+		cfg.LocalPlayerName = "lyrion-tui on " + host
 	}
 	return cfg, nil
 }

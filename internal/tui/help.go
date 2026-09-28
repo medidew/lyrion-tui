@@ -23,7 +23,8 @@ Space              play/pause the active player - works no matter
 s                  stop the active player
 [ / ]              previous / next track
 + / -              volume up/down
-d                  jump to the player-select panel
+d                  jump to the player-select panel; its first row,
+                   "Local", plays through this machine
 /                  search the library
 ?                  toggle this help
 q / Ctrl+C         quit`

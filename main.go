@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/medidew/lyrion-tui/internal/config"
+	"github.com/medidew/lyrion-tui/internal/localplayer"
 	"github.com/medidew/lyrion-tui/internal/lyrionapi"
 	"github.com/medidew/lyrion-tui/internal/tui"
 )
@@ -23,7 +24,14 @@ func main() {
 	}
 	defer server.Close()
 
-	if err := tui.NewApp(server).Run(); err != nil {
+	localID := localplayer.ID()
+	local := tui.LocalPlayerConfig{
+		ID:        localID,
+		Name:      cfg.LocalPlayerName,
+		StreamURL: localplayer.StreamURL(cfg.ServerHost(), cfg.WebPort, localID),
+	}
+
+	if err := tui.NewApp(server, local).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}

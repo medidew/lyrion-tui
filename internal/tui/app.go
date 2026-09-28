@@ -24,6 +24,7 @@ type App struct {
 	library    *libraryPanel
 	nowPlaying *nowPlayingPanel
 	queueCache *queueCache
+	local      *localPlayer
 	hintBar    *tview.TextView
 
 	focusables []tview.Primitive
@@ -33,11 +34,12 @@ type App struct {
 	helpReturnFocus tview.Primitive
 }
 
-func NewApp(server *lyrionapi.LyrionServer) *App {
+func NewApp(server *lyrionapi.LyrionServer, local LocalPlayerConfig) *App {
 	app := &App{
 		server: server,
 		tview:  tview.NewApplication(),
 	}
+	app.local = &localPlayer{app: app, config: local}
 
 	app.players = newPlayersPanel(app)
 	app.library = newLibraryPanel(app)
@@ -51,7 +53,7 @@ func NewApp(server *lyrionapi.LyrionServer) *App {
 
 	root := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(app.pages, 0, 1, true).
-		AddItem(app.nowPlaying.root, 4, 0, false).
+		AddItem(app.nowPlaying.root, 5, 0, false). // 3 lines + border
 		AddItem(app.hintBar, 1, 0, false)
 
 	app.focusables = []tview.Primitive{app.pages, app.nowPlaying.root}
@@ -66,6 +68,7 @@ func NewApp(server *lyrionapi.LyrionServer) *App {
 
 // Run starts the event loop and blocks until the user quits.
 func (app *App) Run() error {
+	defer app.local.Close()
 	defer app.nowPlaying.Close()
 	defer app.queueCache.Close()
 	return app.tview.Run()
@@ -171,18 +174,34 @@ func (app *App) SetActivePlayer(player *lyrionapi.LyrionPlayer, summary lyrionap
 	app.tview.SetFocus(app.library.root)
 }
 
+// changeSong runs action, a command that changes which song the active
+// player is playing, and passes its error to onDone (if set) on the UI
+// goroutine. For the local player it goes through a stream restart (see
+// localPlayer.changeSong), so the new song is heard straight away and from
+// its start rather than after the audio already queued up.
+func (app *App) changeSong(action func() error, onDone func(error)) {
+	if app.local.isActive() {
+		app.local.changeSong(action, onDone)
+		return
+	}
+	err := action()
+	if onDone != nil {
+		onDone(err)
+	}
+}
+
 func (app *App) nextTrack() {
 	if app.active == nil {
 		return
 	}
-	app.active.Next()
+	app.changeSong(app.active.Next, nil)
 }
 
 func (app *App) previousTrack() {
 	if app.active == nil {
 		return
 	}
-	app.active.Previous()
+	app.changeSong(app.active.Previous, nil)
 }
 
 func (app *App) togglePlayPause() {
@@ -193,9 +212,16 @@ func (app *App) togglePlayPause() {
 	if err != nil {
 		return
 	}
-	if mode == "play" {
+	switch mode {
+	case "play":
 		app.active.Pause()
-	} else {
+	case "stop":
+		// Unpausing a stopped player does nothing. Starting playback is a
+		// song change as far as the local stream is concerned: it's been
+		// streaming silence.
+		player := app.active
+		app.changeSong(func() error { return player.Play(0) }, nil)
+	default:
 		app.active.Unpause(0)
 	}
 }
@@ -204,11 +230,20 @@ func (app *App) stopActive() {
 	if app.active == nil {
 		return
 	}
-	app.active.Stop()
+	// A stop goes through changeSong too: otherwise the local player would
+	// keep playing the audio LMS still has queued for it.
+	app.changeSong(app.active.Stop, nil)
 }
 
 func (app *App) adjustVolume(delta int) {
 	if app.active == nil {
+		return
+	}
+	// LMS's mixer is a no-op for HTTP stream players, so the local player's
+	// volume is applied locally instead.
+	if app.local.isActive() {
+		app.local.stream.SetVolume(app.local.stream.Volume() + delta)
+		app.nowPlaying.render()
 		return
 	}
 	volume, err := app.active.Volume()
