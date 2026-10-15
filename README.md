@@ -2,7 +2,7 @@
 
 A terminal user interface client for a [Lyrion Music Server](https://lyrion.org/) (LMS, formerly Logitech Media Server / Squeezebox Server). It talks to LMS directly over its plaintext CLI protocol (default port 9090) and allows you to browse your library, pick a player, and control playback, all from the terminal and using only a keyboard. It can also be a player itself: the "Local" player plays the server's audio stream through your computer's speakers.
 
-The project has two parts:
+The project has three parts:
 
 - **`internal/lyrionapi`**: a Go API for the [LMS command-line interface](https://lyrion.org/reference/cli/using-the-cli/), covering library browsing (genres/artists/albums/tracks/playlists/search), playback and playlist control, favorites, random mixes, alarms, player status, and live server-push notifications.
 - **`internal/localplayer`**: plays the server's HTTP audio stream locally, in pure Go.
